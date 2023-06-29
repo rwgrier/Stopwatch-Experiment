@@ -35,8 +35,6 @@ final class StopwatchViewModel: ObservableObject {
     @Published private var currentLapInterval: TimeInterval = 0
     private var timerCancellable: AnyCancellable?
     
-    private lazy var formatter: StopwatchFormatter = { StopwatchFormatter() }()
-    
     init(state: StopwatchState = .initial) {
         setup()
         
@@ -76,7 +74,7 @@ final class StopwatchViewModel: ObservableObject {
     }
     
     func lap() {
-        let displayString = formatter.string(from: currentLapInterval)
+        let displayString = currentLapInterval.displayString
         let lap = Lap(duration: currentLapInterval, displayString: displayString)
 
         laps.append(lap)
@@ -116,15 +114,13 @@ final class StopwatchViewModel: ObservableObject {
             .assign(to: &$secondaryButtonState)
         
         $overallInterval
-            .map { [self] interval in
-                formatter.string(from: interval)
-            }
+            .eraseToAnyPublisher()
+            .mapTimeIntervalToDisplayString()
             .assign(to: &$overallDisplayString)
         
         $currentLapInterval
-            .map { [self] interval in
-                formatter.string(from: interval)
-            }
+            .eraseToAnyPublisher()
+            .mapTimeIntervalToDisplayString()
             .assign(to: &$currentLapDisplayString)
     }
     
@@ -144,4 +140,11 @@ final class StopwatchViewModel: ObservableObject {
 
 private extension String {
     static var defaultDisplayString = "00:00.00"
+}
+
+extension AnyPublisher where Output == TimeInterval, Failure == Never {
+    func mapTimeIntervalToDisplayString() -> AnyPublisher<String, Never> {
+        map { $0.displayString }
+            .eraseToAnyPublisher()
+    }
 }
